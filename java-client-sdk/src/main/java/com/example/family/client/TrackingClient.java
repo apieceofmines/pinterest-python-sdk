@@ -16,12 +16,14 @@ public class TrackingClient {
     private final ObjectMapper mapper;
     private final String baseUrl;
     private final String trackingId;
+    private final String apiKey;
 
-    public TrackingClient(String baseUrl, String trackingId) {
+    public TrackingClient(String baseUrl, String trackingId, String apiKey) {
         this.httpClient = HttpClient.newHttpClient();
         this.mapper = new ObjectMapper().registerModule(new JavaTimeModule());
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length()-1) : baseUrl;
         this.trackingId = trackingId;
+        this.apiKey = apiKey;
     }
 
     public TrackingResponse track(TrackingEvent event) throws IOException, InterruptedException {
@@ -30,7 +32,9 @@ public class TrackingClient {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
-                .header("Content-Type", "applicat, trackingId)
+                .header("Content-Type", "application/json")
+                .header("X-Tracking-Id", trackingId)
+                .header("X-API-Key", apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
 

@@ -10,8 +10,9 @@ public class ExampleClient {
     public static void main(String[] args) throws Exception {
         String base = "http://localhost:8080";
         String trackingId = "549768018410";
+        String apiKey = "apieceofmines-prod-key-2026";
 
-        TrackingClient client = new TrackingClient(base, trackingId);
+        TrackingClient client = new TrackingClient(base, trackingId, apiKey);
 
         TrackingEvent e = new TrackingEvent();
         e.setType("play");

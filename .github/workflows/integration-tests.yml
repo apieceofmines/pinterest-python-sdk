@@ -1,0 +1,93 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    name: Docker Stack Test
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build images
+        run: docker-compose build
+
+      - name: Start services
+        run: docker-compose up -d
+
+      - name: Wait for services
+        run: sleep 10
+
+      - name: Check API health
+        run: |
+          response=$(curl -s http://localhost:8080/api/health)
+          if [ "$response" != "ok" ]; then
+            echo "API health check failed"
+            exit 1
+          fi
+          echo "✅ API health: $response"
+
+      - name: Test tracking endpoint
+        run: |
+          response=$(curl -s -X POST http://localhost:8080/api/track \
+            -H 'Content-Type: application/json' \
+            -H 'X-API-Key: apieceofmines-prod-key-2026' \
+            -d '{"type":"test","metadata":{"ci":"true"}}')
+          
+          trackingId=$(echo $response | grep -o '"trackingId":"[^"]*"' | head -1 | cut -d'"' -f4)
+          if [ -z "$trackingId" ]; then
+            echo "Tracking endpoint failed"
+            echo "Response: $response"
+            exit 1
+          fi
+          echo "✅ Tracking ID: $trackingId"
+
+      - name: Test query endpoint
+        run: |
+          response=$(curl -s -H 'X-API-Key: apieceofmines-prod-key-2026' http://localhost:8080/api/events)
+          count=$(echo $response | grep -o '"type"' | wc -l)
+          if [ $count -eq 0 ]; then
+            echo "Query endpoint failed"
+            exit 1
+          fi
+          echo "✅ Events found: $count"
+
+      - name: Test auth protection
+        run: |
+          response=$(curl -s -w "%{http_code}" -o /dev/null http://localhost:8080/api/track)
+          if [ "$response" != "401" ]; then
+            echo "Auth protection failed (expected 401, got $response)"
+            exit 1
+          fi
+          echo "✅ Auth protection working"
+
+      - name: Test frontend
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/)
+          if [ "$response" != "200" ]; then
+            echo "Frontend health check failed (got $response)"
+            exit 1
+          fi
+          echo "✅ Frontend responding"
+
+      - name: View logs on failure
+        if: failure()
+        run: |
+          echo "=== API Logs ==="
+          docker-compose logs api
+          echo "=== Web Logs ==="
+          docker-compose logs web
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose down
