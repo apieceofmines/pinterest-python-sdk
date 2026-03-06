@@ -25,6 +25,14 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Cache Maven Repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
       - name: Build Backend with Maven
         run: |
           cd java-spring-sample
