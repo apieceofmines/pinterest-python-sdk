@@ -16,22 +16,37 @@ jobs:
     name: Test & Build
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: maven
 
-      - name: Cache Maven Repository
-        uses: actions/cache@v4
+      - name: Restore Maven Cache
+        uses: actions/cache/restore@v4
+        id: maven-cache
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
+
+      - name: Download Dependencies
+        if: steps.maven-cache.outputs.cache-hit != 'true'
+        run: |
+          cd java-spring-sample
+          mvn dependency:resolve
+          cd ../java-client-sdk
+          mvn dependency:resolve
+
+      - name: Save Maven Cache
+        uses: actions/cache/save@v4
+        if: steps.maven-cache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.m2/repository
+          key: ${{ steps.maven-cache.outputs.cache-primary-key }}
 
       - name: Build Backend with Maven
         run: |
@@ -59,10 +74,19 @@ jobs:
     needs: test
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
+
+      - name: Restore Docker Cache
+        uses: actions/cache/restore@v4
+        id: docker-cache
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
 
       - name: Build Backend Image
         uses: docker/build-push-action@v4
@@ -84,13 +108,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Save Docker Cache
+        uses: actions/cache/save@v4
+        if: steps.docker-cache.outputs.cache-hit != 'true'
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ steps.docker-cache.outputs.cache-primary-key }}
+
   quality:
     runs-on: ubuntu-latest
     name: Code Quality Checks
     needs: test
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Code Quality Check
         run: |
@@ -103,7 +134,7 @@ jobs:
     needs: test
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Run Trivy Vulnerability Scanner
         uses: aquasecurity/trivy-action@master
