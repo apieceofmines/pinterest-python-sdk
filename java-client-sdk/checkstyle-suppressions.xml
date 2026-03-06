@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suppressions PUBLIC
+  "-//Puppy Crawl//DTD Suppressions v1.2//EN"
+  "http://www.puppycrawl.com/dtds/suppressions_1_2.dtd">
+
+<suppressions>
+  <!-- Suppress Javadoc requirements for model/DTO classes -->
+  <suppress checks="MissingJavadocMethod" files=".*/(model|entity|dto)/.*\.java$"/>
+  <suppress checks="MissingJavadocType" files=".*/(model|entity|dto)/.*\.java$"/>
+  <suppress checks="MissingJavadocPackage" files=".*/(model|entity|dto)/.*\.java$"/>
+  
+  <!-- Suppress design checks for model/DTO classes -->
+  <suppress checks="DesignForExtension" files=".*/(model|entity|dto)/.*\.java$"/>
+  
+  <!-- Suppress HiddenField and parameter naming for setters -->
+  <suppress checks="HiddenField" files=".*\.java$" lines=".*Setter.*"/>
+  <suppress checks="FinalParameters" files=".*/(model|entity|dto)/.*\.java$"/>
+  
+  <!-- Allow public constructors in example/client classes -->
+  <suppress checks="HideUtilityClassConstructor" files=".*Client\.java$"/>
+</suppressions>
